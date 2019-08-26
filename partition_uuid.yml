@@ -1,0 +1,38 @@
+---
+ - hosts: "{{ host }}"
+   become: true
+   strategy: debug
+   vars:
+    drive: /dev/vdb
+    locate: /test
+   tasks:
+   - name: "create Partition "
+     parted:
+       device: "{{ drive }}"
+       number: 1
+       state: present
+     become: yes
+     become_method: sudo
+# below play for filesystem format.
+   - name: "create FS"
+     filesystem:
+      fstype: ext4
+      dev: "{{ drive }}"
+     become: yes
+     become_method: sudo
+# below play for mount partition.
+   - name: Collect UUID details
+     shell: "blkid {{ drive }} -sUUID -ovalue"
+     register: uuid_result
+#   - debug:
+#      var: uuid_result.stdout_lines
+   - name: "mount the device is above given location "
+     mount:
+       src: "UUID={{ item }}"
+       path: "{{ locate }}"
+       fstype: ext4
+       state: mounted
+     become: yes
+     become_method: sudo
+     with_items:
+        - "{{ uuid_result.stdout_lines }}"
